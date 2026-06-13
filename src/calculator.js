@@ -10,14 +10,18 @@
 function printHelp() {
   console.log(`Usage:
   node src/calculator.js <operator> <a> <b>
-    operator: add | sub | mul | div
+    operator: add | sub | mul | div | mod | pow
     example: node src/calculator.js add 2 3
 
   OR
 
   node src/calculator.js <a> <operator_symbol> <b>
-    operator_symbol: + | - | * | /
+    operator_symbol: + | - | * | / | % | ^ | **
     example: node src/calculator.js 10 / 2
+
+  Unary operators:
+    node src/calculator.js sqrt <a>
+    example: node src/calculator.js sqrt 9
 
   Flags:
     -h, --help   Show this help message
@@ -31,6 +35,20 @@ function isNumeric(n) {
 function toNumber(s) {
   const n = Number(s);
   return n;
+}
+
+function modulo(a, b) {
+  if (b === 0) throw new Error('Modulo by zero is not allowed.');
+  return a % b;
+}
+
+function power(base, exponent) {
+  return Math.pow(base, exponent);
+}
+
+function squareRoot(n) {
+  if (n < 0) throw new Error('Square root of negative number is not allowed.');
+  return Math.sqrt(n);
 }
 
 function compute(op, a, b) {
@@ -49,6 +67,16 @@ function compute(op, a, b) {
     case 'div':
     case '/':
       return a / b;
+    case 'mod':
+    case '%':
+      return modulo(a, b);
+    case 'pow':
+    case '**':
+    case '^':
+      return power(a, b);
+    case 'sqrt':
+      // unary operator: ignore b
+      return squareRoot(a);
     default:
       throw new Error(`Unsupported operator: ${op}`);
   }
@@ -69,9 +97,10 @@ function main(argv) {
   let aStr;
   let bStr;
 
-  // Two supported styles:
+  // Supported styles:
   // 1) operator word first: add 2 3
   // 2) infix: 2 + 3
+  // 3) unary operator: sqrt 9
 
   if (argv.length === 3) {
     // Could be either style; detect if first arg is an operator word
@@ -79,7 +108,7 @@ function main(argv) {
     const second = argv[1];
     const third = argv[2];
 
-    const wordOps = new Set(['add', 'sub', 'mul', 'div', 'multiply']);
+    const wordOps = new Set(['add', 'sub', 'mul', 'div', 'multiply', 'mod', 'pow']);
     if (wordOps.has(first)) {
       op = first;
       aStr = second;
@@ -90,15 +119,33 @@ function main(argv) {
       op = second;
       bStr = third;
     }
+  } else if (argv.length === 2) {
+    // unary operator support (e.g., sqrt 9) or reversed (9 sqrt)
+    const first = argv[0].toLowerCase();
+    const second = argv[1].toLowerCase();
+    const unaryOps = new Set(['sqrt']);
+
+    if (unaryOps.has(first)) {
+      op = first;
+      aStr = second;
+      bStr = undefined;
+    } else if (unaryOps.has(second)) {
+      op = second;
+      aStr = first;
+      bStr = undefined;
+    } else {
+      console.error('Invalid arguments. Use --help for usage.');
+      process.exit(1);
+    }
   } else {
     console.error('Invalid arguments. Use --help for usage.');
     process.exit(1);
   }
 
   const a = toNumber(aStr);
-  const b = toNumber(bStr);
+  const b = bStr !== undefined ? toNumber(bStr) : undefined;
 
-  if (!isNumeric(a) || !isNumeric(b)) {
+  if (!isNumeric(a) || (bStr !== undefined && !isNumeric(b))) {
     console.error('Both operands must be numeric.');
     process.exit(1);
   }
@@ -106,6 +153,12 @@ function main(argv) {
   // Division by zero guard
   if ((op === 'div' || op === '/') && b === 0) {
     console.error('Error: Division by zero is not allowed.');
+    process.exit(1);
+  }
+
+  // Modulo by zero guard (different message)
+  if ((op === 'mod' || op === '%') && b === 0) {
+    console.error('Modulo by zero is not allowed.');
     process.exit(1);
   }
 
@@ -126,7 +179,10 @@ module.exports = {
   isNumeric,
   toNumber,
   printHelp,
-  main
+  main,
+  modulo,
+  power,
+  squareRoot
 };
 
 if (require.main === module) {
