@@ -120,6 +120,15 @@ function main(argv) {
   }
 }
 
+// Export functions for testing and reuse
+module.exports = {
+  compute,
+  isNumeric,
+  toNumber,
+  printHelp,
+  main
+};
+
 if (require.main === module) {
   main(process.argv.slice(2));
 }
